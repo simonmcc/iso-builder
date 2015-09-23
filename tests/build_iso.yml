@@ -1,0 +1,17 @@
+---
+# ansiblefied http://askubuntu.com/questions/457528/how-do-i-create-an-efi-bootable-iso-of-a-customized-version-of-ubuntu
+- name: Build Custom ISO
+  hosts: all
+  gather_facts: false
+  sudo: true
+
+  vars:
+    iso_distro: hlinux
+    iso_version: "01-399"
+    iso_distro_flavor: hlinux
+    # TODO: find a way to handle the nasty file names used by the gozer generated ISO
+    iso_basename: "hos2.0-build01-399"
+    iso_url: "http://tarballs.gozer.ftclab.gozer.hpcloud.net/hos/hos-2.0.0/archived_build/01-399/{{ iso_basename }}.iso"
+
+  roles:
+    - { role: iso-builder }
