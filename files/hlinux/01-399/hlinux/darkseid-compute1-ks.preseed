@@ -1,0 +1,121 @@
+#Necessary to access the remote hlinux repo
+# Will need to be change to point to local
+d-i mirror/suite string cattleprod
+d-i mirror/udeb/suite string cattleprod
+
+d-i mirror/protocol string http
+d-i mirror/country string manual
+d-i mirror/http/hostname string http://10.241.144.24:79
+d-i mirror/http/hostname seen true
+d-i mirror/http/directory string /hlm/hlinux
+d-i mirror/http/directory seen true
+
+#Ensure the Keyboard config is set ok
+d-i debian-installer/locale string en_US.UTF-8
+d-i keymap select us
+d-i keyboard-configuration/xkb-keymap select us
+d-i debian-installer/splash boolean false
+d-i console-setup/ask_detect        boolean false
+d-i console-setup/layoutcode        string us
+d-i console-setup/variantcode       string
+#May need to modify this for static assignment
+d-i netcfg/get_nameservers  string
+d-i netcfg/get_ipaddress    string
+d-i netcfg/get_netmask      string 255.255.255.0
+d-i netcfg/get_gateway      string
+d-i netcfg/dhcp_timeout     string 240
+d-i netcfg/confirm_static   boolean true
+d-i netcfg/hostname string hlm
+#Do not attempt remote ntp config
+d-i clock-setup/ntp boolean false
+d-i clock-setup/utc boolean true
+# The d-i netcfg/hostname string hlm does not appear to work
+d-i partman/early_command string \
+hostname hlm; \
+echo hlm > /etc/hostname; \
+wget http://10.241.144.24:79/preseed/configure_partitioning; \
+sh ./configure_partitioning 10.241.144.24:79
+
+d-i partman-auto/method string lvm
+# Blow away without prejudice what was there previously
+# May need to be a bit more conservative here for BM
+# Also need to add more intelligence to the disk partitioning
+d-i partman-auto/disk string /dev/sda
+d-i partman-auto/purge_lvm_from_device boolean true
+d-i partman-lvm/device_remove_lvm boolean true
+d-i partman-md/device_remove_md boolean true
+d-i partman-lvm/device_remove_lvm_span boolean true
+d-i partman-lvm/confirm boolean true
+d-i partman-lvm/confirm_nooverwrite boolean true
+d-i partman-basicmethods/method_only boolean false
+d-i partman-auto/choose_recipe select hlm-config
+d-i partman-auto/expert_recipe_file string /partition_scheme
+d-i partman-partitioning/confirm_write_new_label boolean true
+d-i partman/choose_partition select finish
+d-i partman-md/confirm boolean true
+d-i partman/confirm boolean true
+d-i partman/confirm_nooverwrite boolean true
+d-i partman-basicfilesystems/no_swap boolean false
+d-i partman-basicfilesystems partman-basicfilesystems/no_mount_point boolean false
+d-i partman-lvm/device_remove_lvm boolean true
+d-i partman-lvm/device_remove_lvm_span boolean true
+d-i partman-lvm/confirm boolean true
+d-i partman-lvm/confirm_nooverwrite boolean true
+d-i partman-efi/non_efi_system  true
+
+d-i clock-setup/utc boolean true
+# Do not set up additional apt repos for now
+d-i apt-setup/services-select multiselect
+d-i apt-setup/security_host string
+d-i base-installer/kernel/image     string linux-server
+# Do not install any extra packages
+tasksel    tasksel/first    multiselect    none
+# Other than ssh and python which are erquirements on ansible clients
+d-i pkgsel/include string openssh-server python rsync
+d-i passwd/root-login       boolean false
+d-i passwd/make-user        boolean true
+d-i passwd/user-fullname    string stack
+d-i passwd/username string stack
+# Need to generate this on the fly
+d-i passwd/user-password-crypted    password $6$n28/B/P2cZqo$m1rIbvBv.sPP2UL7k.9W..iN04QWe1n2iIcrYHi5GfTyiu3eoNni9XvGLMeGj9cjQ0rxErUprEEcsMublsSIb1
+d-i passwd/user-uid string
+d-i user-setup/allow-password-weak  boolean false
+d-i user-setup/encrypt-home boolean false
+d-i debian-installer/allow_unauthenticated  string false
+# The ssh key populate may need more review - ok for now
+# The wget at the end is so that the net boot is turned off once installed
+# as per cobbler pxe_just_once settings
+d-i preseed/late_command string \
+in-target touch /etc/cobbler_hlm_installed;\
+in-target mkdir -p /home/stack/.ssh;\
+in-target chown stack:stack /home/stack/.ssh;\
+in-target chmod 700 /home/stack/.ssh;\
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCzUJQv09mv8X9J3BCjRZIK3zjLk0z+3nNR7k3YSudOF9imno2ifXsZ8Ic0qFVHsdlTo6oNhV4WAa9gV9YHsbIU0CAug95iVCONF3RJZ3wEv5zHhz9a9n/EfMXLCFPWs3S6dRQ3W0cXg/1SkD7aUeOSFoOmXv9v2vHokifHoEfAYRcUnQxqy1381Yi16kxklj6joPYtRAkYHIyuktG4i4rfnyAXLBt2cn4ug4Dr5x5dyAkx9Ip4usq5okLFDkzX6uakOQAC2JSCfv1kbadpqPoSHcpnidm4K+UH443WcsS2K0v9CPD+g1I7hUjfq8d+rIeHXNu0ZDl6o85IDS+5S5n9 stack@hlm" > /target//home/stack/.ssh/authorized_keys;\
+in-target chown stack:stack /home/stack/.ssh/authorized_keys;\
+in-target sed -i "s,sudo[\t]ALL=(ALL:ALL) ALL,sudo ALL = (ALL) NOPASSWD: ALL,g" /etc/sudoers;\
+in-target sed -i "s,#PasswordAuthentication yes,PasswordAuthentication no,g" /etc/ssh/sshd_config;\
+umount /target/unused; \
+lvremove -f /dev/hlm-vg/unused;\
+in-target sed -i "s,unused,,g" /etc/fstab;\
+wget http://10.241.144.24:79/preseed/configure_network.sh; \
+cp ./configure_network.sh /target/tmp;\
+in-target bash /tmp/configure_network.sh ;\
+in-target rm /tmp/configure_network.sh;\
+sed -i "s,deb http,deb [arch=amd64] http,g" /target/etc/apt/sources.list;\
+echo "deb [arch=i386] http://10.241.144.24:79/hlm/cmc32 cattleprod main" >> /target/etc/apt/sources.list;\
+in-target dpkg --add-architecture i386;\
+in-target apt-get update;\
+in-target rm /etc/resolv.conf;\
+wget http://10.241.144.24:79/cblr/svc/op/nopxe/system/compute1
+d-i pkgsel/update-policy    select none
+d-i grub-installer/bootdev string default
+d-i grub-installer/skip     boolean false
+d-i lilo-installer/skip     boolean false
+d-i grub-installer/only_debian      boolean true
+d-i grub-installer/with_other_os    boolean true
+d-i finish-install/keep-consoles    boolean false
+d-i finish-install/reboot_in_progress       note
+d-i cdrom-detect/eject      boolean true
+#d-i debian-installer/exit/halt  boolean true
+# Power off machine at the end
+d-i debian-installer/exit/poweroff  boolean true

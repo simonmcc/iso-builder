@@ -1,0 +1,71 @@
+---
+# tasks file for iso-builder
+#
+- set_fact:
+    mounted_iso_creates: "{{ mounted_iso }}/isolinux"
+    isolinux_dir: "{{ new_iso }}/isolinux"
+    isolinux_bin: "isolinux/isolinux.bin"
+    isolinux_cat: "isolinux/isolinux.cat"
+  when: iso_distro_flavor == "server"
+
+- set_fact:
+    mounted_iso_creates: "{{ mounted_iso }}/linux"
+    isolinux_dir: "{{ new_iso }}"
+    isolinux_bin: "isolinux.bin"
+    isolinux_cat: "isolinux.cat"
+  when: iso_distro_flavor == "mini"
+
+- set_fact:
+    mounted_iso_creates: "{{ mounted_iso }}/linux"
+    isolinux_dir: "{{ new_iso }}"
+    isolinux_bin: "isolinux.bin"
+    isolinux_cat: "isolinux.cat"
+  when: iso_distro_flavor == "hlinux"
+
+- debug: var=mounted_iso_creates
+
+- apt: name=dumpet
+- apt: name=mkisofs
+
+- get_url: url={{ iso_url }} dest={{ workdir }}/{{ iso_name }}
+- file: state=directory path={{ mounted_iso }}
+- command: sudo mount -o loop,ro {{ workdir }}/{{ iso_name }} {{ mounted_iso }}
+  args:
+    creates: "{{ mounted_iso_creates }}"
+- command: rsync -av --delete {{ mounted_iso }} {{ new_iso }}
+
+# start the customisation
+- file: state=directory dest="{{ new_iso }}/isolinux" mode=0775
+  when: iso_distro_flavor == "server"
+- copy: content="en" dest="{{ new_iso }}/isolinux/lang"
+  when: iso_distro_flavor == "server"
+
+# overwrite the default initrd with the netboot version
+#- shell: cp "{{ mounted_iso }}/dists/cattleprod/main/installer-amd64/current/images/netboot/debian-installer/amd64/initrd.gz" "{{ new_iso }}"
+
+- file: dest="{{ new_iso }}" mode=0775
+
+- copy: src="files/{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/ks.preseed" dest="{{ new_iso }}/ks.preseed"
+  when: iso_distro_flavor != "hlinux"
+- template: src="templates/ks.cfg.j2" dest="{{ new_iso }}/ks.cfg"
+  when: iso_distro_flavor != "hlinux"
+
+- copy: src="files/{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/hlm-preseed.cfg" dest="{{ new_iso }}/hlm-preseed.cfg"
+  when: iso_distro_flavor == "hlinux"
+# EFI Boot
+- file: dest="{{ new_iso }}/boot/grub" mode=0775
+- copy: src="files/{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/boot/grub/grub.cfg" dest="{{ new_iso }}/boot/grub/grub.cfg"
+# MBR/Legacy Boot
+- copy: src="files/{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/isolinux.cfg" dest="{{ isolinux_dir }}/isolinux.cfg"
+- copy: src="files/{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/txt.cfg" dest="{{ isolinux_dir }}/txt.cfg"
+
+# build the ISO
+- command: sudo mkisofs -U -A "Custom" -V "Custom" -volset "Custom" -J -joliet-long -r -v -T -o ../Custom.iso -b {{ isolinux_bin }} -c {{ isolinux_cat }} -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot .
+  args:
+    chdir: "{{ new_iso }}"
+  register: mkisofs
+
+- debug: var=mkisofs
+
+# verify the ISO
+- command: dumpet -i "{{ new_iso }}/../Custom.iso"

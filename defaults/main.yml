@@ -1,0 +1,31 @@
+---
+# default: http://releases.ubuntu.com//14.04/ubuntu-14.04.3-server-amd64.iso dest=/tmp/ubuntu-14.04.3-server-amd64.iso
+# can we use the mini iso instead?
+# http://archive.ubuntu.com/ubuntu/dists/trusty-updates/main/installer-amd64/current/images/netboot/mini.iso
+iso_distro: "ubuntu"
+# iso_distro_flavor: server|mini
+iso_distro_flavor: "server"
+iso_version: "14.04"
+iso_release: ".3"
+iso_flavor: "server"
+iso_arch: "amd64"
+iso_urlbase: "http://releases.ubuntu.com/"
+iso_basename: "{{ iso_distro }}-{{ iso_version }}{{ iso_release }}-{{ iso_flavor }}-{{ iso_arch }}"
+iso_name: "{{ iso_basename }}.iso"
+iso_url: "{{ iso_urlbase }}/{{ iso_version }}/{{ iso_name }}"
+
+workdir: /tmp
+# trailing / is important for rsync to copy the contents
+mounted_iso: "{{ workdir }}/mounted_{{ iso_basename }}/"
+new_iso: "{{ workdir }}/new_{{ iso_basename }}_iso/"
+
+iso_dhcp: false
+iso_ip:  10.0.2.15
+iso_netmask: 255.255.255.0
+iso_gateway: 10.0.2.2
+iso_dns: 10.0.2.3
+iso_ntp: 10.0.2.2
+
+iso_username: stack
+iso_fullname: stack
+iso_encrypted_password: "$6$SvgLlx4z$NYZEdu.dtX8qtNNlJzB5wVeVK4G4SQsDrilolou3/xWXp/U.pD.EY/mvaG.dEkjQWl8knPLIXmGoK/Kn6zrR8."
