@@ -45,19 +45,19 @@
 
 - file: dest="{{ new_iso }}" mode=0775
 
-- copy: src="files/{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/ks.preseed" dest="{{ new_iso }}/ks.preseed"
+- copy: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/ks.preseed" dest="{{ new_iso }}/ks.preseed"
   when: iso_distro_flavor != "hlinux"
 - template: src="templates/ks.cfg.j2" dest="{{ new_iso }}/ks.cfg"
   when: iso_distro_flavor != "hlinux"
 
-- copy: src="files/{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/hlm-preseed.cfg" dest="{{ new_iso }}/hlm-preseed.cfg"
+- copy: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/hlm-preseed.cfg" dest="{{ new_iso }}/hlm-preseed.cfg"
   when: iso_distro_flavor == "hlinux"
 # EFI Boot
 - file: dest="{{ new_iso }}/boot/grub" mode=0775
-- copy: src="files/{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/boot/grub/grub.cfg" dest="{{ new_iso }}/boot/grub/grub.cfg"
+- copy: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/boot/grub/grub.cfg" dest="{{ new_iso }}/boot/grub/grub.cfg"
 # MBR/Legacy Boot
-- copy: src="files/{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/isolinux.cfg" dest="{{ isolinux_dir }}/isolinux.cfg"
-- copy: src="files/{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/txt.cfg" dest="{{ isolinux_dir }}/txt.cfg"
+- copy: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/isolinux.cfg" dest="{{ isolinux_dir }}/isolinux.cfg"
+- copy: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/txt.cfg" dest="{{ isolinux_dir }}/txt.cfg"
 
 # build the ISO
 - command: sudo mkisofs -U -A "Custom" -V "Custom" -volset "Custom" -J -joliet-long -r -v -T -o ../Custom.iso -b {{ isolinux_bin }} -c {{ isolinux_cat }} -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot .
