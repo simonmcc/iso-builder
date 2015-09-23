@@ -61,6 +61,16 @@ Vagrant Workflow
 ----------------
 There is a top-level Vagrantfile that wraps most of the build & test phase, this is currently optimised for use under OSX, on a linux workstation you could avoid using a VM to do the ISO extract & rebuild.
 
+typical workstation dev/test cycle looks like:
+
+	vagrant up iso-builder
+	# tweak templates & variables
+	vagrant provision iso-builder
+	
+	vagrant up boot-from-iso
+	
+
+
 License
 -------
 
