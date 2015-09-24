@@ -28,7 +28,7 @@ Role Variables
 	iso_basename: "{{ iso_distro }}-{{ iso_version }}{{ iso_release }}-{{ iso_flavor }}-{{ iso_arch }}"
 	iso_name: "{{ iso_basename }}.iso"
 	iso_url: "{{ iso_urlbase }}/{{ iso_version }}/{{ iso_name }}"
-	
+
 	workdir: /tmp
 	mounted_iso: "{{ workdir }}/mounted_{{ iso_basename }}/"
 	new_iso: "{{ workdir }}/new_{{ iso_basename }}_iso/"
@@ -39,13 +39,13 @@ Example Playbook
 ----------------
 
 Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
-	
+
 	---
 	- name: Build Custom ISO
 	  hosts: all
 	  gather_facts: false
 	  sudo: true
-	
+
 	  vars:
 	    iso_distro: hlinux
 	    iso_version: "01-399"
@@ -53,7 +53,7 @@ Including an example of how to use your role (for instance, with variables passe
 	    # TODO: find a way to handle the nasty file names used by the gozer generated ISO
 	    iso_basename: "hos2.0-build01-399"
 	    iso_url: "http://tarballs.gozer.ftclab.gozer.hpcloud.net/hos/hos-2.0.0/archived_build/01-399/{{ iso_basename }}.iso"
-	
+
 	  roles:
 	    - { role: iso-builder }
 
@@ -66,10 +66,11 @@ typical workstation dev/test cycle looks like:
 	vagrant up iso-builder
 	# tweak templates & variables
 	vagrant provision iso-builder
-	
-	vagrant up boot-from-iso
-	
 
+	vagrant up boot-from-iso
+
+
+TODO: https://trateotu.proxy.nl/create-your-custom-centos-install-disc-in-mac-os-x/
 
 License
 -------
