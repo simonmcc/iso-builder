@@ -25,47 +25,63 @@
 - debug: var=mounted_iso_creates
 
 - apt: name=dumpet
+  delegate_to: "{{ build_host }}"
 - apt: name=mkisofs
+  delegate_to: "{{ build_host }}"
 
 - get_url: url={{ iso_url }} dest={{ workdir }}/{{ iso_name }}
+  environment: host_env
+  delegate_to: "{{ build_host }}"
 - file: state=directory path={{ mounted_iso }}
+  delegate_to: "{{ build_host }}"
 - command: sudo mount -o loop,ro {{ workdir }}/{{ iso_name }} {{ mounted_iso }}
   args:
     creates: "{{ mounted_iso_creates }}"
+  delegate_to: "{{ build_host }}"
 - command: rsync -av --delete {{ mounted_iso }} {{ new_iso }}
+  delegate_to: "{{ build_host }}"
 
 # start the customisation
 - file: state=directory dest="{{ new_iso }}/isolinux" mode=0775
   when: iso_distro_flavor == "server"
+  delegate_to: "{{ build_host }}"
 - copy: content="en" dest="{{ new_iso }}/isolinux/lang"
   when: iso_distro_flavor == "server"
+  delegate_to: "{{ build_host }}"
 
 # overwrite the default initrd with the netboot version
 #- shell: cp "{{ mounted_iso }}/dists/cattleprod/main/installer-amd64/current/images/netboot/debian-installer/amd64/initrd.gz" "{{ new_iso }}"
 
 - file: dest="{{ new_iso }}" mode=0775
+  delegate_to: "{{ build_host }}"
 
-- copy: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/ks.preseed" dest="{{ new_iso }}/ks.preseed"
+- template: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/ks.preseed.j2" dest="{{ new_iso }}/ks.preseed"
   when: iso_distro_flavor != "hlinux"
-- template: src="templates/ks.cfg.j2" dest="{{ new_iso }}/ks.cfg"
+  delegate_to: "{{ build_host }}"
+
+- template: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/ks.cfg.j2" dest="{{ new_iso }}/ks.cfg"
   when: iso_distro_flavor != "hlinux"
+  delegate_to: "{{ build_host }}"
 
 - copy: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/hlm-preseed.cfg" dest="{{ new_iso }}/hlm-preseed.cfg"
   when: iso_distro_flavor == "hlinux"
+  delegate_to: "{{ build_host }}"
+
 # EFI Boot
 - file: dest="{{ new_iso }}/boot/grub" mode=0775
-- copy: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/boot/grub/grub.cfg" dest="{{ new_iso }}/boot/grub/grub.cfg"
+  delegate_to: "{{ build_host }}"
+- template: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/boot/grub/grub.cfg" dest="{{ new_iso }}/boot/grub/grub.cfg"
+  delegate_to: "{{ build_host }}"
+
 # MBR/Legacy Boot
-- copy: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/isolinux.cfg" dest="{{ isolinux_dir }}/isolinux.cfg"
-- copy: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/txt.cfg" dest="{{ isolinux_dir }}/txt.cfg"
+- template: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/isolinux.cfg" dest="{{ isolinux_dir }}/isolinux.cfg"
+  delegate_to: "{{ build_host }}"
+- template: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/txt.cfg" dest="{{ isolinux_dir }}/txt.cfg"
+  delegate_to: "{{ build_host }}"
 
 # build the ISO
-- command: sudo mkisofs -U -A "Custom" -V "Custom" -volset "Custom" -J -joliet-long -r -v -T -o ../Custom.iso -b {{ isolinux_bin }} -c {{ isolinux_cat }} -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot .
+- command: sudo mkisofs -U -A "Custom" -V "Custom" -volset "Custom" -J -joliet-long -r -v -T -o {{ iso_output }} -b {{ isolinux_bin }} -c {{ isolinux_cat }} -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot .
   args:
     chdir: "{{ new_iso }}"
+  delegate_to: "{{ build_host }}"
   register: mkisofs
-
-- debug: var=mkisofs
-
-# verify the ISO
-- command: dumpet -i "{{ new_iso }}/../Custom.iso"
