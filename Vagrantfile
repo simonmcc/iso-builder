@@ -21,10 +21,15 @@ Vagrant.configure(2) do |config|
     # Preseed the VM with a local copy of the ISO to avoid long downloads
     # iso_builder.vm.provision :shell, inline: "cp /vagrant/mini.iso /tmp/mini.iso"
     # TODO: work out how to handle the nasty HOS2 ISO naming scheme
-    iso_builder.vm.provision :shell, inline: "[[ ! -f /tmp/hos2.0-build01-399.iso ]] && cp /vagrant/hos2.0-build01-399.iso /tmp/ || exit 0"
+    # iso_builder.vm.provision :shell, inline: "[[ -f /vagrant/hos2.0-build01-399.iso ]] -a [[ ! -f /tmp/hos2.0-build01-399.iso ]] && cp /vagrant/hos2.0-build01-399.iso /tmp/ || exit 0"
+    # http://vorboss.dl.sourceforge.net/project/dban/dban/dban-2.3.0/dban-2.3.0_i586.iso
 
     # run the playbook that creates a new ISO
     iso_builder.vm.provision "ansible" do |ansible|
+      ansible.sudo = true
+      #ansible.verbose = 'vvvv'
+      ansible.host_key_checking = false
+      ansible.extra_vars = { build_host: "iso-builder", iso_output: "/tmp/Custom.iso" }
       ansible.playbook = "tests/build_iso.yml"
     end
 
