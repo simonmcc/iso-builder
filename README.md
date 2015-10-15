@@ -9,6 +9,7 @@ debian-installer preseed notes:
 * https://www.debian.org/releases/wheezy/i386/apbs02.html.en
 * https://www.debian.org/releases/wheezy/i386/apbs03.html.en
 * https://www.debian.org/releases/stable/example-preseed.txt
+* http://thornelabs.net/2015/10/14/debian-ubuntu-preseed-documentation-and-working-examples.html
 
 Requirements
 ------------
@@ -92,4 +93,4 @@ limitations under the License.
 Author Information
 ------------------
 
-Simon McCartney simon.mccartney@hpe.com
+Simon McCartney simon@mccartney.ie
