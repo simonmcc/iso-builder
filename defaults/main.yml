@@ -1,4 +1,6 @@
 ---
+# used via delegate_to to pick where the ISO image is built
+build_host: 127.0.0.1
 # default: http://releases.ubuntu.com//14.04/ubuntu-14.04.3-server-amd64.iso dest=/tmp/ubuntu-14.04.3-server-amd64.iso
 # can we use the mini iso instead?
 # http://archive.ubuntu.com/ubuntu/dists/trusty-updates/main/installer-amd64/current/images/netboot/mini.iso
@@ -19,6 +21,8 @@ workdir: /tmp
 mounted_iso: "{{ workdir }}/mounted_{{ iso_basename }}/"
 new_iso: "{{ workdir }}/new_{{ iso_basename }}_iso/"
 
+iso_output: "/var/www/html/{{ inventory_hostname }}.iso"
+
 iso_dhcp: false
 iso_ip:  10.0.2.15
 iso_netmask: 255.255.255.0
@@ -29,3 +33,7 @@ iso_ntp: 10.0.2.2
 iso_username: stack
 iso_fullname: stack
 iso_encrypted_password: "$6$SvgLlx4z$NYZEdu.dtX8qtNNlJzB5wVeVK4G4SQsDrilolou3/xWXp/U.pD.EY/mvaG.dEkjQWl8knPLIXmGoK/Kn6zrR8."
+
+# default to not using a proxy for http access during plugin install
+host_env:
+  no_proxy: "localhost,127.0.0.1"

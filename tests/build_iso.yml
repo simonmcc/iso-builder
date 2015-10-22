@@ -6,12 +6,13 @@
   sudo: true
 
   vars:
-    iso_distro: hlinux
-    iso_version: "01-399"
-    iso_distro_flavor: hlinux
+    # http://vorboss.dl.sourceforge.net/project/dban/dban/dban-2.3.0/dban-2.3.0_i586.iso
+    iso_distro: dban
+    iso_version: "2.3.0"
+    iso_distro_flavor: dban
     # TODO: find a way to handle the nasty file names used by the gozer generated ISO
-    iso_basename: "hos2.0-build01-399"
-    iso_url: "http://tarballs.gozer.ftclab.gozer.hpcloud.net/hos/hos-2.0.0/archived_build/01-399/{{ iso_basename }}.iso"
+    iso_basename: "dban-{{ iso_version }}_i586"
+    iso_url: "http://vorboss.dl.sourceforge.net/project/dban/dban/dban-{{ iso_version }}/{{ iso_basename }}.iso"
 
   roles:
     - { role: iso-builder }

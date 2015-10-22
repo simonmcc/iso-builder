@@ -1,0 +1,106 @@
+# TODO: Over-write disk
+# TODO: Updates
+d-i partman-auto/method string lvm
+d-i partman-auto-lvm/guided_size string max
+d-i partman-auto/choose_recipe select atomic
+d-i partman-partitioning/confirm_write_new_label boolean true
+d-i partman/confirm_write_new_label     boolean true
+d-i partman/choose_partition            select  finish
+d-i partman/confirm_nooverwrite         boolean true
+d-i partman/confirm                     boolean true
+d-i partman-auto/purge_lvm_from_device  boolean true
+d-i partman-lvm/device_remove_lvm       boolean true
+d-i partman-lvm/confirm                 boolean true
+d-i partman-lvm/confirm_nooverwrite     boolean true
+d-i partman-auto/init_automatically_partition       select      Guided - use entire disk and set up LVM
+d-i partman/choose_partition                select      Finish partitioning and write changes to disk
+d-i partman-auto-lvm/no_boot            boolean true
+d-i partman-md/device_remove_md         boolean true
+d-i partman-md/confirm                  boolean true
+d-i partman-md/confirm_nooverwrite      boolean true
+
+# configure the network
+d-i netcfg/get_hostname string {{ inventory_hostname }}
+# The d-i netcfg/hostname string hlm does not appear to work
+d-i partman/early_command string \
+hostname {{ inventory_hostname }} ; \
+echo {{ inventory_hostname }} > /etc/hostname;
+
+# netcfg will choose an interface that has link if possible. This makes it
+# skip displaying a list if there is more than one interface.
+d-i netcfg/choose_interface select em1
+
+# If you prefer to configure the network manually, uncomment this line and
+# the static network configuration below.
+# don't prompt the user to accept the static details after DHCP fails
+d-i netcfg/disable_autoconfig boolean true
+
+# If you want the preconfiguration file to work on systems both with and
+# without a dhcp server, uncomment these lines and the static network
+# configuration below.
+d-i netcfg/dhcp_failed note
+d-i netcfg/dhcp_options select Configure network manually
+
+# May need to modify this for static assignment
+# Static network configuration.
+#
+# IPv4 example
+d-i netcfg/get_ipaddress string {{ ansible_ssh_host }}
+d-i netcfg/get_netmask string 255.255.255.0
+d-i netcfg/get_gateway string 10.241.148.1
+d-i netcfg/get_nameservers  string {{ dns_server }}
+d-i netcfg/get_domain string unassigned-domain
+
+d-i clock-setup/ntp boolean false
+d-i clock-setup/utc boolean true
+d-i time/zone string Etc/UTC
+
+# Setup repo access
+d-i mirror/country          string United States
+d-i mirror/http/hostname    string us.archive.ubuntu.com
+d-i mirror/http/directory   string /ubuntu
+d-i mirror/suite            string trusty
+d-i mirror/http/proxy string {{ host_env.http_proxy }}
+
+####################################################################
+# Software Selections.
+tasksel    tasksel/first    multiselect    none
+d-i pkgsel/include string dbus eject task-ssh-server rsync python xz-utils
+
+
+####################################################################
+# User setup - stack/stack
+d-i passwd/root-login       boolean false
+d-i passwd/make-user        boolean true
+d-i passwd/user-fullname    string stack
+d-i passwd/username string stack
+# Need to generate this on the fly
+d-i passwd/user-password-crypted    password $6$n28/B/P2cZqo$m1rIbvBv.sPP2UL7k.9W..iN04QWe1n2iIcrYHi5GfTyiu3eoNni9XvGLMeGj9cjQ0rxErUprEEcsMublsSIb1
+d-i passwd/user-uid string
+d-i user-setup/allow-password-weak  boolean false
+d-i user-setup/encrypt-home boolean false
+d-i debian-installer/allow_unauthenticated  string false
+# set NOPASSWD for the sudo group
+in-target sed -i "s,sudo[\t]ALL=(ALL:ALL) ALL,sudo ALL = (ALL) NOPASSWD: ALL,g" /etc/sudoers;\
+in-target sed -i "s,#PasswordAuthentication yes,PasswordAuthentication no,g" /etc/ssh/sshd_config;\
+d-i pkgsel/update-policy    select none
+d-i grub-installer/bootdev string default
+d-i grub-installer/skip     boolean false
+d-i lilo-installer/skip     boolean false
+d-i grub-installer/only_debian      boolean true
+d-i grub-installer/with_other_os    boolean true
+d-i finish-install/keep-consoles    boolean false
+d-i finish-install/reboot_in_progress       note
+d-i cdrom-detect/eject      boolean true
+
+# setup a mccartsi user so that mccartsi can connect
+d-i preseed/late_command string in-target useradd mccartsi;\
+in-target mkdir -p /home/mccartsi/.ssh;\
+in-target chown mccartsi:mccartsi /home/mccartsi/.ssh;\
+in-target chmod 700 /home/mccartsi/.ssh;\
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEAmdv+rdGgJ7FmEZkVUH7eBpg0IAkXNLMg2srv38BQypm0kdhIBBm6Tp+1EkDNJ8cLmxJQCPQmA2R1ObD0LYsDBOVzvRYx1I49kNUJMXpO0vltf/66zQSWBNHH4DuGqRGqUwxVqL63TL48rfIP7I5lw3o1KSoqtxqvhEiYzvitzVc= simonm@vanquish" > /target/home/mccartsi/.ssh/authorized_keys;\
+in-target chown mccartsi:mccartsi /home/mccartsi/.ssh/authorized_keys
+
+# reboot
+d-i di-utils-reboot/really_reboot boolean true
+
