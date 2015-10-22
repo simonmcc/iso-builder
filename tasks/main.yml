@@ -41,8 +41,10 @@
 
 - apt: name=dumpet
   delegate_to: "{{ build_host }}"
+  when: false
 - apt: name=mkisofs
   delegate_to: "{{ build_host }}"
+  when: false
 
 # Grab the ISO
 - get_url: url={{ iso_url }} dest={{ workdir }}/{{ iso_name }}
@@ -78,7 +80,7 @@
   when: iso_distro == "ubuntu"
   delegate_to: "{{ build_host }}"
 
-- copy: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/hlm-preseed.cfg" dest="{{ new_iso }}/hlm-preseed.cfg"
+- template: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/hlm-preseed.cfg.j2" dest="{{ new_iso }}/hlm-preseed.cfg"
   when: iso_distro_flavor == "hlinux"
   delegate_to: "{{ build_host }}"
 
@@ -94,7 +96,7 @@
 - template: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/isolinux.cfg" dest="{{ isolinux_dir }}/isolinux.cfg"
   delegate_to: "{{ build_host }}"
 - template: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/txt.cfg" dest="{{ isolinux_dir }}/txt.cfg"
-  when: iso_distro == "ubuntu"
+  when: iso_distro == "ubuntu" or iso_distro == "hlinux"
   delegate_to: "{{ build_host }}"
 
 # build the ISO
