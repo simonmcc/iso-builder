@@ -1,0 +1,201 @@
+# these are actually set via append on the boot loader:
+#   language=en country=US locale=en_US.UTF-8 keymap=us
+# as ks.preseed isn't loaded until later, only here for refernce
+d-i debian-installer/keymap string  us
+d-i debian-installer/language string en
+d-i debian-installer/country string US
+d-i debian-installer/locale select  en_US.UTF-8
+# once debian-installer is up & running & the cdrom mounted
+# then these values will be used
+d-i debian-installer/framebuffer  boolean false
+d-i console-keymaps-at/keymap       select  us
+d-i localechooser/shortlist select  US
+
+
+####################################################################
+#  hLinux blaster preseed
+####################################################################
+# Installation Sources
+d-i cdrom/codename string cattleprod
+
+# We never want to use a mirror.
+d-i apt-setup/use_mirror       boolean false
+d-i apt-setup/contrib          boolean false
+# We don't need upgrades and the like.
+d-i apt-setup/services-select  string
+
+# Never try to mount media.
+d-i mountmedia/disable boolean true
+
+d-i clock-setup/ntp boolean false
+d-i clock-setup/utc boolean true
+d-i time/zone string US/Eastern
+
+d-i netcfg/get_nameservers  string
+d-i netcfg/get_hostname string unassigned-hostname
+d-i netcfg/get_domain string unassigned-domain
+
+
+# The d-i netcfg/hostname string hlm does not appear to work
+d-i preseed/early_command string \
+echo SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{address}==\"{{ iso_choose_interface_mac }}\", ATTR{dev_id}==\"0x0\", ATTR{type}==\"1\", KERNEL==\"eth*\", NAME=\"{{iso_choose_interface}}\" \
+> /etc/udev/rules.d/60-manual-net.rules; \
+hostname hlm; \
+echo hlm > /etc/hostname;
+
+
+
+# defaults to auto-selecting the first live NIC
+{% if iso_choose_interface is defined %}
+# To pick a particular interface instead:
+d-i netcfg/choose_interface select {{ iso_choose_interface }}
+{% else %}
+# netcfg will choose an interface that has link if possible. This makes it
+# skip displaying a list if there is more than one interface.
+d-i netcfg/choose_interface select auto
+{% endif %}
+
+# May need to modify this for static assignment
+# Static network configuration.
+#
+# IPv4 example
+{% if iso_static_network is defined and iso_static_network %}
+d-i netcfg/disable_autoconfig boolean true
+d-i netcfg/get_ipaddress string {{ iso_ipaddress }}
+d-i netcfg/get_netmask string {{ iso_netmask }}
+d-i netcfg/get_gateway string {{ iso_gateway }}
+d-i netcfg/get_nameservers string {{ iso_nameserver }}
+d-i netcfg/confirm_static boolean true
+{% else %}
+d-i netcfg/get_ipaddress    string
+d-i netcfg/get_netmask      string 255.255.255.0
+d-i netcfg/get_gateway      string
+d-i netcfg/dhcp_timeout     string 240
+d-i netcfg/confirm_static   boolean true
+{% endif %}
+d-i netcfg/hostname string hlm
+
+####################################################################
+# Disks.  The first disk is the lucky one.  Wipe it to death.
+# Account for virtio drives.
+
+
+# No LVM prompting
+d-i partman/early_command string \
+sh /sbin/wipe_first_disk_partition_table true; \
+sh /sbin/configure_partitioning;
+d-i partman-auto/disk string /dev/sda
+d-i partman-auto/method string lvm
+d-i partman-auto/purge_lvm_from_device boolean true
+d-i partman-basicmethods/method_only boolean false
+d-i partman-auto/choose_recipe select hlm-config
+d-i partman-auto/expert_recipe_file string /partition_scheme
+
+d-i partman-partitioning/confirm_write_new_label boolean true
+d-i partman/choose_partition select finish
+d-i partman-md/confirm boolean true
+d-i partman/confirm boolean true
+d-i partman/confirm_nooverwrite boolean true
+d-i partman-basicfilesystems/no_swap boolean false
+d-i partman-basicfilesystems partman-basicfilesystems/no_mount_point boolean false
+d-i partman-lvm/device_remove_lvm boolean true
+d-i partman-lvm/device_remove_lvm_span boolean true
+d-i partman-lvm/confirm boolean true
+d-i partman-lvm/confirm_nooverwrite boolean true
+d-i partman-efi/non_efi_system  true
+
+d-i passwd/root-login       boolean false
+d-i passwd/make-user        boolean true
+d-i passwd/user-fullname    string stack
+
+
+# Only one OS installed.
+d-i grub-installer/only_debian boolean true
+
+####################################################################
+# Software Selections.
+tasksel    tasksel/first    multiselect    none
+d-i pkgsel/include string dbus eject task-ssh-server rsync python xz-utils
+
+# Some versions of the installer can report back on what software you have
+# installed, and what software you use. The default is not to report back,
+# but sending reports helps the project determine what software is most
+# popular and include it on CDs.
+popularity-contest popularity-contest/participate boolean false
+
+####################################################################
+# Misc
+
+# Enable i386 packages
+d-i apt-setup/multiarch string
+
+# Disable security updates.
+d-i apt-setup/security_host string
+d-i apt-setup/volatile_host string
+
+# Clock
+d-i clock-setup/ntp boolean false
+
+# Doesn't do anything on KVM.
+d-i cdrom-detect/eject boolean true
+d-i grub-installer/bootdev string /dev/sda
+
+####################################################################
+# Post-processing before reboot.  Remember, no environment exists.
+# 1) cleanup unused VG
+# 2) configure network
+# 3) more network config!
+# early config to match an ether MAC to a known name (after first reboot)
+# to force a certain MAC to a name, we need to update mtab in the initrd
+# https://www.debian-administration.org/article/658/DebianInstaller_Remotely_with_Multiple_Network_Interfaces
+#
+# /etc/udev/rules.d/70-persistent-net.rules
+# PCI device 0x8086:0x10fb (ixgbe)
+# SUBSYSTEM=="net", ACTION=="add", DRIVERS=="?*", ATTR{address}=="5c:b9:01:89:b4:18", ATTR{dev_id}=="0x0", ATTR{type}=="1", KERNEL=="eth*", NAME="eth4"
+# 4) add a vagrant user
+d-i preseed/late_command string \
+umount /target/unused; \
+lvremove -f /dev/hlm-vg/unused;\
+in-target sed -i "s,unused,,g" /etc/fstab;\
+cp /sbin/configure_network.sh /target/tmp;\
+cp /sbin/configure_network.sh /target/root;\
+in-target bash /tmp/configure_network.sh ;\
+in-target sed -i "s,sudo[\t]ALL=(ALL:ALL) ALL,sudo ALL = (ALL) NOPASSWD: ALL,g" /etc/sudoers ;\
+# 3 - more network tweaking ;\
+rm /target/etc/udev/rules.d/70-persistent-net.rules; \
+echo SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{address}==\"{{ iso_choose_interface_mac }}\", ATTR{dev_id}==\"0x0\", ATTR{type}==\"1\", KERNEL==\"eth*\", NAME=\"{{iso_choose_interface}}\" \
+> /target/etc/udev/rules.d/60-persistent-net.rules; \
+# setup a vagrant user so that vagrant can connect ;\
+in-target useradd vagrant;\
+in-target mkdir -p /home/vagrant/.ssh;\
+in-target chown vagrant:vagrant /home/vagrant/.ssh;\
+in-target chmod 700 /home/vagrant/.ssh;\
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key" > /target/home/vagrant/.ssh/authorized_keys;\
+in-target chown vagrant:vagrant /home/vagrant/.ssh/authorized_keys
+
+
+d-i passwd/root-login       boolean false
+d-i passwd/make-user        boolean true
+d-i passwd/user-fullname    string stack
+d-i passwd/username string stack
+# Need to generate this on the fly
+d-i passwd/user-password-crypted    password $6$n28/B/P2cZqo$m1rIbvBv.sPP2UL7k.9W..iN04QWe1n2iIcrYHi5GfTyiu3eoNni9XvGLMeGj9cjQ0rxErUprEEcsMublsSIb1
+d-i passwd/user-uid string
+d-i user-setup/allow-password-weak  boolean false
+d-i user-setup/encrypt-home boolean false
+d-i debian-installer/allow_unauthenticated  string false
+in-target sed -i "s,sudo[\t]ALL=(ALL:ALL) ALL,sudo ALL = (ALL) NOPASSWD: ALL,g" /etc/sudoers;\
+in-target sed -i "s,#PasswordAuthentication yes,PasswordAuthentication no,g" /etc/ssh/sshd_config;\
+d-i pkgsel/update-policy    select none
+d-i grub-installer/bootdev string default
+d-i grub-installer/skip     boolean false
+d-i lilo-installer/skip     boolean false
+d-i grub-installer/only_debian      boolean true
+d-i grub-installer/with_other_os    boolean true
+d-i finish-install/keep-consoles    boolean false
+d-i finish-install/reboot_in_progress       note
+d-i cdrom-detect/eject      boolean true
+
+
+# reboot
+d-i di-utils-reboot/really_reboot boolean true
