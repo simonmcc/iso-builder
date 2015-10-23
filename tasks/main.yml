@@ -48,7 +48,7 @@
 
 # Grab the ISO
 - get_url: url={{ iso_url }} dest={{ workdir }}/{{ iso_name }}
-  environment: host_env
+  #  environment: host_env
   delegate_to: "{{ build_host }}"
 # Mount it
 - file: state=directory path={{ mounted_iso }}
