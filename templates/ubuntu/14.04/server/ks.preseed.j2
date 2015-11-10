@@ -25,10 +25,14 @@ d-i netcfg/get_hostname string {{ inventory_hostname }}
 d-i partman/early_command string \
 hostname {{ inventory_hostname }} ; \
 echo {{ inventory_hostname }} > /etc/hostname;
-
+#
 # netcfg will choose an interface that has link if possible. This makes it
 # skip displaying a list if there is more than one interface.
-d-i netcfg/choose_interface select em1
+d-i netcfg/choose_interface select {{ iso_primary_interface }}
+
+{% if iso_dhcp is defined and iso_dhcp %}
+d-i netcfg/disable_autoconfig boolean false
+{% else %}
 
 # If you prefer to configure the network manually, uncomment this line and
 # the static network configuration below.
@@ -50,6 +54,7 @@ d-i netcfg/get_netmask string {{ iso_netmask }}
 d-i netcfg/get_gateway string {{ iso_gateway }}
 d-i netcfg/get_nameservers  string {{ iso_nameserver }}
 d-i netcfg/get_domain string unassigned-domain
+{% endif %}
 
 d-i clock-setup/ntp boolean false
 d-i clock-setup/utc boolean true

@@ -14,7 +14,8 @@
     iso_basename: "ubuntu-{{ iso_version }}-{{ iso_distro_flavor }}-amd64"
     iso_url: "http://releases.ubuntu.com/{{ iso_version }}/{{ iso_basename }}.iso"
 
-    dns_server: 127.0.0.1
+    iso_dhcp: true
+    iso_nameserver: 127.0.0.1
 
   roles:
     - { role: iso-builder }

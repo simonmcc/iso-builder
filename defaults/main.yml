@@ -23,6 +23,7 @@ new_iso: "{{ workdir }}/new_{{ iso_basename }}_iso/"
 
 iso_output: "/var/www/html/{{ inventory_hostname }}.iso"
 
+iso_primary_interface: em1
 iso_dhcp: false
 iso_ip:  10.0.2.15
 iso_netmask: 255.255.255.0
