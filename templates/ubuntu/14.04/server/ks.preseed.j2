@@ -45,10 +45,10 @@ d-i netcfg/dhcp_options select Configure network manually
 # Static network configuration.
 #
 # IPv4 example
-d-i netcfg/get_ipaddress string {{ ansible_ssh_host }}
-d-i netcfg/get_netmask string 255.255.255.0
-d-i netcfg/get_gateway string 10.241.148.1
-d-i netcfg/get_nameservers  string {{ dns_server }}
+d-i netcfg/get_ipaddress string {{ iso_ipaddress }}
+d-i netcfg/get_netmask string {{ iso_netmask }}
+d-i netcfg/get_gateway string {{ iso_gateway }}
+d-i netcfg/get_nameservers  string {{ iso_nameserver }}
 d-i netcfg/get_domain string unassigned-domain
 
 d-i clock-setup/ntp boolean false
