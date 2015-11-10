@@ -75,6 +75,7 @@ d-i mirror/http/proxy string
 # Software Selections.
 tasksel    tasksel/first    multiselect    none
 d-i pkgsel/include string dbus eject rsync python xz-utils
+d-i pkgsel/update-policy select unattended-upgrades
 
 
 ####################################################################
@@ -92,7 +93,6 @@ d-i debian-installer/allow_unauthenticated  string false
 # set NOPASSWD for the sudo group
 in-target sed -i "s,sudo[\t]ALL=(ALL:ALL) ALL,sudo ALL = (ALL) NOPASSWD: ALL,g" /etc/sudoers;\
 in-target sed -i "s,#PasswordAuthentication yes,PasswordAuthentication no,g" /etc/ssh/sshd_config;\
-d-i pkgsel/update-policy select unattended-upgrades
 d-i grub-installer/bootdev string default
 d-i grub-installer/skip     boolean false
 d-i lilo-installer/skip     boolean false
