@@ -36,6 +36,8 @@ Vagrant.configure(2) do |config|
     # apply the iso-builder role to create a custom install ISO
     iso_builder.vm.box = "hashicorp/precise64"
 
+    iso_builder.vm.provision :shell, inline: "rm -rf /tmp/Custom.iso /vagrant/Custom.iso"
+    iso_builder.vm.provision :shell, inline: "cp /vagrant/ubuntu-14.04.3-server-amd64.iso /tmp/"
     # run the playbook that creates a new ISO
     iso_builder.vm.provision "ansible" do |ansible|
       ansible.sudo = true
