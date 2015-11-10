@@ -13,7 +13,7 @@ Vagrant.configure(2) do |config|
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.
 
-  config.vm.define "iso_builder_dban" do |iso_builder|
+  config.vm.define "iso-builder-dban" do |iso_builder|
     # this VM is used to build the ISO, when your developing on an OSX machine
     # apply the iso-builder role to create a custom install ISO
     iso_builder.vm.box = "hashicorp/precise64"
@@ -31,7 +31,7 @@ Vagrant.configure(2) do |config|
     iso_builder.vm.provision :shell, inline: "cp /tmp/Custom.iso /vagrant/Custom.iso"
   end
 
-  config.vm.define "iso_builder_ubuntu" do |iso_builder|
+  config.vm.define "iso-builder-ubuntu" do |iso_builder|
     # this VM is used to build the ISO, when your developing on an OSX machine
     # apply the iso-builder role to create a custom install ISO
     iso_builder.vm.box = "hashicorp/precise64"
@@ -41,7 +41,7 @@ Vagrant.configure(2) do |config|
       ansible.sudo = true
       #ansible.verbose = 'vvvv'
       ansible.host_key_checking = false
-      ansible.extra_vars = { build_host: "iso_builder_ubuntu", iso_output: "/tmp/Custom.iso" }
+      ansible.extra_vars = { build_host: "iso-builder-ubuntu", iso_output: "/tmp/Custom.iso" }
       ansible.playbook = "tests/build_iso_ubuntu1404.yml"
     end
 
