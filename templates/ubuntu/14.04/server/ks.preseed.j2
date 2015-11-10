@@ -60,7 +60,9 @@ d-i mirror/country          string United States
 d-i mirror/http/hostname    string us.archive.ubuntu.com
 d-i mirror/http/directory   string /ubuntu
 d-i mirror/suite            string trusty
+{% if host_env.http_proxy is defined %}
 d-i mirror/http/proxy string {{ host_env.http_proxy }}
+{% endif %}
 
 ####################################################################
 # Software Selections.

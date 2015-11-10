@@ -39,12 +39,11 @@
 
 - debug: var=mounted_iso_creates
 
-- apt: name=dumpet
+- apt: name="{{ item }}"
+  with_items:
+    - dumpet
+    - mkisofs
   delegate_to: "{{ build_host }}"
-  when: false
-- apt: name=mkisofs
-  delegate_to: "{{ build_host }}"
-  when: false
 
 # Grab the ISO
 - get_url: url={{ iso_url }} dest={{ workdir }}/{{ iso_name }}

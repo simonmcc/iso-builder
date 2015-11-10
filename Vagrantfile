@@ -13,24 +13,36 @@ Vagrant.configure(2) do |config|
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.
 
-  config.vm.define "iso-builder" do |iso_builder|
+  config.vm.define "iso_builder_dban" do |iso_builder|
     # this VM is used to build the ISO, when your developing on an OSX machine
     # apply the iso-builder role to create a custom install ISO
     iso_builder.vm.box = "hashicorp/precise64"
-
-    # Preseed the VM with a local copy of the ISO to avoid long downloads
-    # iso_builder.vm.provision :shell, inline: "cp /vagrant/mini.iso /tmp/mini.iso"
-    # TODO: work out how to handle the nasty HOS2 ISO naming scheme
-    # iso_builder.vm.provision :shell, inline: "[[ -f /vagrant/hos2.0-build01-399.iso ]] -a [[ ! -f /tmp/hos2.0-build01-399.iso ]] && cp /vagrant/hos2.0-build01-399.iso /tmp/ || exit 0"
-    # http://vorboss.dl.sourceforge.net/project/dban/dban/dban-2.3.0/dban-2.3.0_i586.iso
 
     # run the playbook that creates a new ISO
     iso_builder.vm.provision "ansible" do |ansible|
       ansible.sudo = true
       #ansible.verbose = 'vvvv'
       ansible.host_key_checking = false
-      ansible.extra_vars = { build_host: "iso-builder", iso_output: "/tmp/Custom.iso" }
-      ansible.playbook = "tests/build_iso.yml"
+      ansible.extra_vars = { build_host: "iso_builder_dban", iso_output: "/tmp/Custom.iso" }
+      ansible.playbook = "tests/build_iso_dban.yml"
+    end
+
+    # retrieve the new ISO file from the VM
+    iso_builder.vm.provision :shell, inline: "cp /tmp/Custom.iso /vagrant/Custom.iso"
+  end
+
+  config.vm.define "iso_builder_ubuntu" do |iso_builder|
+    # this VM is used to build the ISO, when your developing on an OSX machine
+    # apply the iso-builder role to create a custom install ISO
+    iso_builder.vm.box = "hashicorp/precise64"
+
+    # run the playbook that creates a new ISO
+    iso_builder.vm.provision "ansible" do |ansible|
+      ansible.sudo = true
+      #ansible.verbose = 'vvvv'
+      ansible.host_key_checking = false
+      ansible.extra_vars = { build_host: "iso_builder_ubuntu", iso_output: "/tmp/Custom.iso" }
+      ansible.playbook = "tests/build_iso_ubuntu1404.yml"
     end
 
     # retrieve the new ISO file from the VM

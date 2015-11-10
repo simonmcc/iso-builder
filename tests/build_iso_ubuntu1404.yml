@@ -1,0 +1,20 @@
+---
+# ansiblefied http://askubuntu.com/questions/457528/how-do-i-create-an-efi-bootable-iso-of-a-customized-version-of-ubuntu
+- name: Build Custom Ubuntu ISO
+  hosts: all
+  gather_facts: false
+  sudo: true
+
+  vars:
+    # http://releases.ubuntu.com/14.04.3/ubuntu-14.04.3-server-amd64.iso
+    iso_distro: ubuntu
+    iso_version: "14.04.3"
+    iso_distro_flavor: server
+    # TODO: find a way to handle the nasty file names used by the gozer generated ISO
+    iso_basename: "ubuntu-{{ iso_version }}-{{ iso_distro_flavor }}-amd64"
+    iso_url: "http://releases.ubuntu.com/{{ iso_version }}/{{ iso_basename }}.iso"
+
+    dns_server: 127.0.0.1
+
+  roles:
+    - { role: iso-builder }
