@@ -53,7 +53,7 @@ d-i netcfg/get_ipaddress string {{ iso_ipaddress }}
 d-i netcfg/get_netmask string {{ iso_netmask }}
 d-i netcfg/get_gateway string {{ iso_gateway }}
 d-i netcfg/get_nameservers  string {{ iso_nameserver }}
-d-i netcfg/get_domain string unassigned-domain
+d-i netcfg/get_domain string {{ iso_dns_domain }}
 {% endif %}
 
 d-i clock-setup/ntp boolean false
@@ -74,7 +74,7 @@ d-i mirror/http/proxy string
 ####################################################################
 # Software Selections.
 tasksel    tasksel/first    multiselect    none
-d-i pkgsel/include string dbus eject rsync python xz-utils
+d-i pkgsel/include string dbus eject rsync python xz-utils tcpdump openssh-server
 d-i pkgsel/update-policy select unattended-upgrades
 
 
