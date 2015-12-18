@@ -51,6 +51,26 @@ Vagrant.configure(2) do |config|
     iso_builder.vm.provision :shell, inline: "cp /tmp/Custom.iso /vagrant/Custom.iso"
   end
 
+  config.vm.define "iso-builder-hlinux" do |iso_builder|
+    # this VM is used to build the ISO, when your developing on an OSX machine
+    # apply the iso-builder role to create a custom install ISO
+    iso_builder.vm.box = "hashicorp/precise64"
+
+    iso_builder.vm.provision :shell, inline: "rm -rf /tmp/Custom.iso /vagrant/Custom.iso"
+    iso_builder.vm.provision :shell, inline: "cp /vagrant/hLinux-cattleprod-amd64-blaster-netinst-20151119-hlm.2015-12-11T07:42:36_8230c52.iso /tmp/"
+    # run the playbook that creates a new ISO
+    iso_builder.vm.provision "ansible" do |ansible|
+      ansible.sudo = true
+      #ansible.verbose = 'vvvv'
+      ansible.host_key_checking = false
+      ansible.extra_vars = { ilo_eth4: "", mgmt_gateway: "127.0.0.1", build_host: "iso-builder-hlinux", iso_output: "/tmp/Custom.iso", hos_build: "01-291", hos_iso_name: "hLinux-cattleprod-amd64-blaster-netinst-20151119-hlm.2015-12-11T07:42:36_8230c52.iso" }
+      ansible.playbook = "tests/build_iso_hlinux.yml"
+    end
+
+    # retrieve the new ISO file from the VM
+    iso_builder.vm.provision :shell, inline: "cp /tmp/Custom.iso /vagrant/Custom.iso"
+  end
+
   config.vm.define "boot-from-iso" do |iso_boot|
     # this VM is a special unprovisioned node that we set to boot from an ISO
     iso_boot.vm.box = "boot-from-iso"
