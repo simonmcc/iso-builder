@@ -115,7 +115,7 @@ d-i grub-installer/only_debian boolean true
 ####################################################################
 # Software Selections.
 tasksel    tasksel/first    multiselect    none
-d-i pkgsel/include string dbus eject task-ssh-server rsync python xz-utils
+d-i pkgsel/include string dbus eject task-ssh-server rsync python xz-utils ntp ntpdate
 
 # Some versions of the installer can report back on what software you have
 # installed, and what software you use. The default is not to report back,
