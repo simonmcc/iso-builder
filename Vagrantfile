@@ -52,6 +52,7 @@ Vagrant.configure(2) do |config|
   end
 
   config.vm.define "boot-from-iso" do |iso_boot|
+    iso_boot.vm.boot_timeout = 600
     # this VM is a special unprovisioned node that we set to boot from an ISO
     iso_boot.vm.box = "boot-from-iso"
     iso_boot.vm.box_url = "https://www.dropbox.com/s/yum30836kjwgt4w/boot-from-iso.box?dl=1"

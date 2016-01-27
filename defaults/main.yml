@@ -30,6 +30,7 @@ iso_netmask: 255.255.255.0
 iso_gateway: 10.0.2.2
 iso_dns: 10.0.2.3
 iso_ntp: 10.0.2.2
+iso_dns_domain: "unassigned-domain"
 
 iso_username: stack
 iso_fullname: stack
