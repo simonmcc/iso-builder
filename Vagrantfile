@@ -1,6 +1,16 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+
+# HACK: ensure we have a local copy of ipxe.iso
+hos_url_base = "http://tarballs.gozer.ftclab.gozer.hpcloud.net/hos/hos-2.1/archived_build/"
+hos_build = "01-291"
+hos_iso_name = "hLinux-cattleprod-amd64-blaster-netinst-20151119-hlm.2015-12-11T07:42:36_8230c52.iso"
+hos_iso_url = "#{ hos_url_base }/#{ hos_build }/#{ hos_iso_name }"
+
+system("bash -c '[ ! -f ipxe.iso ] && wget http://boot.ipxe.org/ipxe.iso'")
+system("bash -c '[ ! -f #{hos_iso_name} ] && wget #{hos_iso_url}'")
+
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
@@ -57,13 +67,20 @@ Vagrant.configure(2) do |config|
     iso_builder.vm.box = "hashicorp/precise64"
 
     iso_builder.vm.provision :shell, inline: "rm -rf /tmp/Custom.iso /vagrant/Custom.iso"
-    iso_builder.vm.provision :shell, inline: "cp /vagrant/hLinux-cattleprod-amd64-blaster-netinst-20151119-hlm.2015-12-11T07:42:36_8230c52.iso /tmp/"
+    iso_builder.vm.provision :shell, inline: "cp /vagrant/#{hos_iso_name} /tmp/"
     # run the playbook that creates a new ISO
     iso_builder.vm.provision "ansible" do |ansible|
       ansible.sudo = true
       #ansible.verbose = 'vvvv'
       ansible.host_key_checking = false
-      ansible.extra_vars = { ilo_eth4: "", mgmt_gateway: "127.0.0.1", build_host: "iso-builder-hlinux", iso_output: "/tmp/Custom.iso", hos_build: "01-291", hos_iso_name: "hLinux-cattleprod-amd64-blaster-netinst-20151119-hlm.2015-12-11T07:42:36_8230c52.iso" }
+      ansible.extra_vars = {
+        nic_name: "eth0",
+        nic_mac: "08:00:27:08:3F:50",
+        mgmt_gateway: "127.0.0.1",
+        build_host: "iso-builder-hlinux",
+        iso_output: "/tmp/Custom.iso", hos_build: "01-291",
+        hos_iso_name: "#{hos_iso_name}"
+      }
       ansible.playbook = "tests/build_iso_hlinux.yml"
     end
 
@@ -77,7 +94,15 @@ Vagrant.configure(2) do |config|
     iso_boot.vm.box = "boot-from-iso"
     iso_boot.vm.box_url = "https://www.dropbox.com/s/yum30836kjwgt4w/boot-from-iso.box?dl=1"
 
+    # create a bunch of networks to make it interesting
+    iso_boot.vm.network :private_network, :ip => "192.168.11.11", :mac => '08002774EBC1'
+    iso_boot.vm.network :private_network, :ip => "192.168.12.12", :mac => '0800275D6A92'
+    iso_boot.vm.network :private_network, :ip => "192.168.13.13", :mac => '080027844773'
+
     iso_boot.vm.provider "virtualbox" do |virtualbox|
+      # NAT MAC: 080027083F58
+      virtualbox.customize ["modifyvm", :id, "--macaddress1", "080027083F50" ]
+
       virtualbox.gui = true unless ENV['NO_GUI']
       # --boot<1-4> none|floppy|dvd|disk|net>
       virtualbox.customize ["modifyvm", :id, "--boot1", "dvd"]

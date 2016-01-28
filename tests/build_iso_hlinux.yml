@@ -14,9 +14,9 @@
 
     iso_dhcp: true
     iso_nameserver: 127.0.0.1
-    iso_choose_interface: eth4
-    iso_choose_interface_mac: "{{ ilo_eth4 }}"
-    iso_static_network: true
+    iso_choose_interface: "{{ nic_name }}"
+    iso_choose_interface_mac: "{{ nic_mac }}"
+    iso_static_network: false
     iso_ipaddress: "{{ ansible_ssh_host }}"
     iso_netmask: "255.255.255.0"
     iso_gateway: "{{ mgmt_gateway }}"
