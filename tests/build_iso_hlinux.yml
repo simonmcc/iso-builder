@@ -5,21 +5,5 @@
   gather_facts: false
   sudo: true
 
-  vars:
-    iso_distro: hlinux
-    iso_distro_flavor: hlinux
-    iso_version: "{{ hos_build }}"
-    iso_basename: "{{ hos_iso_name|replace('.iso', '') }}"
-    iso_url: "http://tarballs.gozer.ftclab.gozer.hpcloud.net/hos/hos-2.1/archived_build/{{ iso_version }}/{{ iso_basename }}.iso"
-
-    iso_dhcp: true
-    iso_nameserver: 127.0.0.1
-    iso_choose_interface: "{{ nic_name }}"
-    iso_choose_interface_mac: "{{ nic_mac }}"
-    iso_static_network: false
-    iso_ipaddress: "{{ ansible_ssh_host }}"
-    iso_netmask: "255.255.255.0"
-    iso_gateway: "{{ mgmt_gateway }}"
-
   roles:
     - { role: iso-builder }
