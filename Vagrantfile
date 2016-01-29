@@ -1,6 +1,16 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+
+# HACK: ensure we have a local copy of ipxe.iso
+hos_url_base = "http://tarballs.gozer.ftclab.gozer.hpcloud.net/hos/hos-2.1/archived_build/"
+hos_build = "01-291"
+hos_iso_name = "hLinux-cattleprod-amd64-blaster-netinst-20151119-hlm.2015-12-11T07:42:36_8230c52.iso"
+hos_iso_url = "#{ hos_url_base }/#{ hos_build }/#{ hos_iso_name }"
+
+system("bash -c '[ ! -f ipxe.iso ] && wget http://boot.ipxe.org/ipxe.iso'")
+system("bash -c '[ ! -f #{hos_iso_name} ] && wget #{hos_iso_url}'")
+
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
@@ -51,19 +61,73 @@ Vagrant.configure(2) do |config|
     iso_builder.vm.provision :shell, inline: "cp /tmp/Custom.iso /vagrant/Custom.iso"
   end
 
-  config.vm.define "iso-builder-hlinux" do |iso_builder|
+  config.vm.define "iso-builder-hlinux-dhcp" do |iso_builder|
     # this VM is used to build the ISO, when your developing on an OSX machine
     # apply the iso-builder role to create a custom install ISO
     iso_builder.vm.box = "hashicorp/precise64"
 
     iso_builder.vm.provision :shell, inline: "rm -rf /tmp/Custom.iso /vagrant/Custom.iso"
-    iso_builder.vm.provision :shell, inline: "cp /vagrant/hLinux-cattleprod-amd64-blaster-netinst-20151119-hlm.2015-12-11T07:42:36_8230c52.iso /tmp/"
+    iso_builder.vm.provision :shell, inline: "cp /vagrant/#{hos_iso_name} /tmp/"
     # run the playbook that creates a new ISO
     iso_builder.vm.provision "ansible" do |ansible|
       ansible.sudo = true
       #ansible.verbose = 'vvvv'
       ansible.host_key_checking = false
-      ansible.extra_vars = { ilo_eth4: "", mgmt_gateway: "127.0.0.1", build_host: "iso-builder-hlinux", iso_output: "/tmp/Custom.iso", hos_build: "01-291", hos_iso_name: "hLinux-cattleprod-amd64-blaster-netinst-20151119-hlm.2015-12-11T07:42:36_8230c52.iso" }
+      ansible.extra_vars = {
+        iso_distro: "hlinux",
+        iso_distro_flavor: "hlinux",
+        iso_version: "#{ hos_build }",
+        iso_basename: "{{ hos_iso_name|replace('.iso', '') }}",
+        iso_url: "#{ hos_iso_url }",
+
+        # Use DHCP to get an address, NB, hLinux then persists
+        # this as a static ip address on the interface
+        iso_choose_interface: "eth0",
+        iso_choose_interface_mac: "08:00:27:08:3F:50",
+
+        build_host: "iso-builder-hlinux-dhcp",
+        iso_output: "/tmp/Custom.iso",
+        hos_iso_name: "#{hos_iso_name}"
+      }
+      ansible.playbook = "tests/build_iso_hlinux.yml"
+    end
+
+    # retrieve the new ISO file from the VM
+    iso_builder.vm.provision :shell, inline: "cp /tmp/Custom.iso /vagrant/Custom.iso"
+  end
+
+  config.vm.define "iso-builder-hlinux-static" do |iso_builder|
+    # this VM is used to build the ISO, when your developing on an OSX machine
+    # apply the iso-builder role to create a custom install ISO
+    iso_builder.vm.box = "hashicorp/precise64"
+
+    iso_builder.vm.provision :shell, inline: "rm -rf /tmp/Custom.iso /vagrant/Custom.iso"
+    iso_builder.vm.provision :shell, inline: "cp /vagrant/#{hos_iso_name} /tmp/"
+    # run the playbook that creates a new ISO
+    iso_builder.vm.provision "ansible" do |ansible|
+      ansible.sudo = true
+      #ansible.verbose = 'vvvv'
+      ansible.host_key_checking = false
+      ansible.extra_vars = {
+        # these match the private_network definition in the "boot-from-iso" vm below
+        iso_distro: "hlinux",
+        iso_distro_flavor: "hlinux",
+        iso_version: "#{ hos_build }",
+        iso_basename: "{{ hos_iso_name|replace('.iso', '') }}",
+        iso_url: "#{ hos_iso_url }",
+
+        iso_choose_interface: "eth2",
+        iso_choose_interface_mac: "08:00:27:5D:6A:02",
+        iso_nameserver: "127.0.0.1",
+        iso_static_network: true,
+        iso_ipaddress: "192.168.12.12",
+        iso_netmask: "255.255.255.0",
+        iso_gateway: "192.168.12.1",
+
+        build_host: "iso-builder-hlinux-static",
+        iso_output: "/tmp/Custom.iso",
+        hos_iso_name: "#{hos_iso_name}"
+      }
       ansible.playbook = "tests/build_iso_hlinux.yml"
     end
 
@@ -72,11 +136,20 @@ Vagrant.configure(2) do |config|
   end
 
   config.vm.define "boot-from-iso" do |iso_boot|
+    iso_boot.vm.boot_timeout = 600
     # this VM is a special unprovisioned node that we set to boot from an ISO
     iso_boot.vm.box = "boot-from-iso"
     iso_boot.vm.box_url = "https://www.dropbox.com/s/yum30836kjwgt4w/boot-from-iso.box?dl=1"
 
+    # create a bunch of networks to make it interesting
+    iso_boot.vm.network :private_network, :ip => "192.168.11.11", :mac => '08002774EB01'
+    iso_boot.vm.network :private_network, :ip => "192.168.12.12", :mac => '0800275D6A02'
+    iso_boot.vm.network :private_network, :ip => "192.168.13.13", :mac => '080027844703'
+
     iso_boot.vm.provider "virtualbox" do |virtualbox|
+      # NAT MAC: 080027083F58
+      virtualbox.customize ["modifyvm", :id, "--macaddress1", "080027083F00" ]
+
       virtualbox.gui = true unless ENV['NO_GUI']
       # --boot<1-4> none|floppy|dvd|disk|net>
       virtualbox.customize ["modifyvm", :id, "--boot1", "dvd"]

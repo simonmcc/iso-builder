@@ -1,3 +1,2 @@
 .vagrant/
-ubuntu-14.04.3-server-amd64.iso
-Custom.iso
+*.iso
