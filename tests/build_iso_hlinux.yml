@@ -1,0 +1,9 @@
+---
+# ansiblefied http://askubuntu.com/questions/457528/how-do-i-create-an-efi-bootable-iso-of-a-customized-version-of-ubuntu
+- name: Build Custom hLinux ISO
+  hosts: all
+  gather_facts: false
+  sudo: true
+
+  roles:
+    - { role: iso-builder }

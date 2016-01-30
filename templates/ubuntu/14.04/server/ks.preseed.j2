@@ -25,10 +25,14 @@ d-i netcfg/get_hostname string {{ inventory_hostname }}
 d-i partman/early_command string \
 hostname {{ inventory_hostname }} ; \
 echo {{ inventory_hostname }} > /etc/hostname;
-
+#
 # netcfg will choose an interface that has link if possible. This makes it
 # skip displaying a list if there is more than one interface.
-d-i netcfg/choose_interface select em1
+d-i netcfg/choose_interface select {{ iso_primary_interface }}
+
+{% if iso_dhcp is defined and iso_dhcp %}
+d-i netcfg/disable_autoconfig boolean false
+{% else %}
 
 # If you prefer to configure the network manually, uncomment this line and
 # the static network configuration below.
@@ -45,11 +49,12 @@ d-i netcfg/dhcp_options select Configure network manually
 # Static network configuration.
 #
 # IPv4 example
-d-i netcfg/get_ipaddress string {{ ansible_ssh_host }}
-d-i netcfg/get_netmask string 255.255.255.0
-d-i netcfg/get_gateway string 10.241.148.1
-d-i netcfg/get_nameservers  string {{ dns_server }}
-d-i netcfg/get_domain string unassigned-domain
+d-i netcfg/get_ipaddress string {{ iso_ipaddress }}
+d-i netcfg/get_netmask string {{ iso_netmask }}
+d-i netcfg/get_gateway string {{ iso_gateway }}
+d-i netcfg/get_nameservers  string {{ iso_nameserver }}
+d-i netcfg/get_domain string {{ iso_dns_domain }}
+{% endif %}
 
 d-i clock-setup/ntp boolean false
 d-i clock-setup/utc boolean true
@@ -60,12 +65,17 @@ d-i mirror/country          string United States
 d-i mirror/http/hostname    string us.archive.ubuntu.com
 d-i mirror/http/directory   string /ubuntu
 d-i mirror/suite            string trusty
+{% if host_env.http_proxy is defined %}
 d-i mirror/http/proxy string {{ host_env.http_proxy }}
+{% else %}
+d-i mirror/http/proxy string
+{% endif %}
 
 ####################################################################
 # Software Selections.
 tasksel    tasksel/first    multiselect    none
-d-i pkgsel/include string dbus eject task-ssh-server rsync python xz-utils
+d-i pkgsel/include string dbus eject rsync python xz-utils tcpdump openssh-server
+d-i pkgsel/update-policy select unattended-upgrades
 
 
 ####################################################################
@@ -83,7 +93,6 @@ d-i debian-installer/allow_unauthenticated  string false
 # set NOPASSWD for the sudo group
 in-target sed -i "s,sudo[\t]ALL=(ALL:ALL) ALL,sudo ALL = (ALL) NOPASSWD: ALL,g" /etc/sudoers;\
 in-target sed -i "s,#PasswordAuthentication yes,PasswordAuthentication no,g" /etc/ssh/sshd_config;\
-d-i pkgsel/update-policy    select none
 d-i grub-installer/bootdev string default
 d-i grub-installer/skip     boolean false
 d-i lilo-installer/skip     boolean false
