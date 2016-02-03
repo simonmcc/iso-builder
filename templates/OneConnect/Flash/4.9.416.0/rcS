@@ -1,0 +1,51 @@
+#!/bin/sh
+mount -t proc proc /proc
+cdrom=""
+cd_located=""
+echo "Helion Platform Engineering Systems"
+echo -n "Searching for Emulex OneConnect Flash Utility CD"
+possible_devices="sr0 sr1 sr2 sr3 sr4 sda sda1 sda2 sda3 sda4 sda5 sda6 sda7 sda8 sda9"
+
+for i in a b c d e f g h i; do
+       if [ "`cat /proc/ide/hd$i/media 2> /dev/null`" = "cdrom" ]; then
+           cdrom=" hd$i";
+           possible_devices=$possible_devices$cdrom
+       fi;
+done
+for loop in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+        echo -n .
+        for i in $possible_devices; do
+            mount -t iso9660 /dev/$i /cdrom 2>/dev/null
+            `find /cdrom/UFI/oc11-*.ufi >/dev/null 2>/dev/null`
+            if [ $? -eq 0 ]; then
+                   echo -e ""
+                   echo -e "CD located and mounted at /cdrom"
+                   cd_located=located;
+                   break;
+            fi;
+            umount /cdrom 2> /dev/null
+        done
+        if [ $cd_located ]; then
+            break;
+        fi
+	sleep 2
+done
+
+echo
+sleep 2
+mount -t vfat /dev/sda4 /usbdrive 2> /dev/null
+
+if [ -z $cd_located ]; then
+        echo "Error: CD was not located. The flash utility will not function correctly. Supported CD-ROM drives are IDE, SCSI and USB."
+else
+	mount -t sysfs sysfs /sys
+	/bin/insmod /modules/seeprogdrv.ko
+	if [ -f  /cdrom/UFI/oc11-*.ufi ] && [ -f /cdrom/UFI/oc10-*.ufi ];then
+		echo y | /bin/flash -x -f /cdrom/UFI/oc11-*.ufi /cdrom/UFI/oc10-*.ufi
+	else
+		echo y | /bin/flash -x -f /cdrom/UFI/oc11-*-embedded.ufi
+		rmmod seeprogdrv
+	fi
+fi
+#/sbin/udevd
+/bin/sh

@@ -37,6 +37,16 @@
     efi_flags: ""
   when: iso_distro_flavor == "dban"
 
+- set_fact:
+    mounted_iso_creates: "{{ mounted_iso }}/initrd"
+    isolinux_dir: "{{ new_iso }}/isolinux"
+    isolinux_bin: "isolinux/isolinux.bin"
+    isolinux_cat: "isolinux/boot.cat"
+    efi_enabled: false
+    efi_flags: ""
+    new_initrd: "/tmp/{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}"
+  when: iso_distro == "OneConnect"
+
 - debug: var=mounted_iso_creates
 
 - apt: name="{{ item }}"
@@ -62,10 +72,10 @@
 
 # start the customisation
 - file: state=directory dest="{{ new_iso }}/isolinux" mode=0775
-  when: iso_distro_flavor == "server"
+  when: iso_distro == "ubuntu" and iso_distro_flavor == "server"
   delegate_to: "{{ build_host }}"
 - copy: content="en" dest="{{ new_iso }}/isolinux/lang"
-  when: iso_distro_flavor == "server"
+  when: iso_distro == "ubuntu" and iso_distro_flavor == "server"
   delegate_to: "{{ build_host }}"
 
 - file: dest="{{ new_iso }}" mode=0775
@@ -83,6 +93,27 @@
   when: iso_distro_flavor == "hlinux"
   delegate_to: "{{ build_host }}"
 
+# OneConnect Flash Upgrade
+# payload on the ISO is an initrd file, which is an ext2 fs
+
+- file: path="{{ new_initrd }}" state=directory
+  when: iso_distro == "OneConnect"
+
+# mount the initrd from the exploded ISO
+- command: sudo mount -o loop {{ new_iso }}/initrd {{ new_initrd }}
+  delegate_to: "{{ build_host }}"
+  when: iso_distro == "OneConnect"
+
+# TODO: Tweak
+- file: path={{ new_initrd }}/iso_builder state=touch
+- template: src="{{ iso_distro }}/{{ iso_distro_flavor }}/{{ iso_version }}/rcS" dest="{{ new_initrd }}/etc/init.d/rcS"
+  delegate_to: "{{ build_host }}"
+
+# repackage modified initrd
+- command: sudo umount {{ new_initrd }}
+  delegate_to: "{{ build_host }}"
+  when: iso_distro == "OneConnect"
+
 # EFI Boot
 - file: dest="{{ new_iso }}/boot/grub" mode=0775
   when: efi_enabled == true
@@ -94,6 +125,7 @@
 # MBR/Legacy Boot
 - template: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/isolinux.cfg" dest="{{ isolinux_dir }}/isolinux.cfg"
   delegate_to: "{{ build_host }}"
+  when: iso_distro != "OneConnect"
 - template: src="{{ iso_distro }}/{{ iso_version }}/{{ iso_distro_flavor }}/isolinux/txt.cfg" dest="{{ isolinux_dir }}/txt.cfg"
   when: iso_distro == "ubuntu" or iso_distro == "hlinux"
   delegate_to: "{{ build_host }}"

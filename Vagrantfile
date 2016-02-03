@@ -135,6 +135,36 @@ Vagrant.configure(2) do |config|
     iso_builder.vm.provision :shell, inline: "cp /tmp/Custom.iso /vagrant/Custom.iso"
   end
 
+  # Rebuild an Emulex NIC Firmware ISO for HP BL465 blades
+  config.vm.define "iso-builder-oneconnect" do |iso_builder|
+    # this VM is used to build the ISO, when your developing on an OSX machine
+    # apply the iso-builder role to create a custom install ISO
+    iso_builder.vm.box = "hashicorp/precise64"
+
+    iso_builder.vm.provision :shell, inline: "rm -rf /tmp/Custom.iso /vagrant/Custom.iso"
+    iso_builder.vm.provision :shell, inline: "cp /vagrant/OneConnect-Flash-4.9.416.0.iso /tmp/"
+    # run the playbook that creates a new ISO
+    iso_builder.vm.provision "ansible" do |ansible|
+      ansible.sudo = true
+      #ansible.verbose = 'vvvv'
+      ansible.host_key_checking = false
+      ansible.extra_vars = {
+        iso_distro: "OneConnect",
+        iso_distro_flavor: "Flash",
+        iso_version: "4.9.416.0",
+        iso_basename: "OneConnect-Flash-4.9.416.0",
+        iso_url: "http://ftp.hp.com/pub/softlib/software12/COL46628/co-131997-1/OneConnect-Flash-4.9.416.0.iso",
+
+        build_host: "iso-builder-oneconnect",
+        iso_output: "/tmp/Custom.iso",
+      }
+      ansible.playbook = "tests/build_iso_oneconnect.yml"
+    end
+
+    # retrieve the new ISO file from the VM
+    iso_builder.vm.provision :shell, inline: "cp /tmp/Custom.iso /vagrant/Custom.iso"
+  end
+
   config.vm.define "boot-from-iso" do |iso_boot|
     iso_boot.vm.boot_timeout = 600
     # this VM is a special unprovisioned node that we set to boot from an ISO
